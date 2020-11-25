@@ -37,9 +37,14 @@ def spectralClustering(adjacency_matrix):
     affinity = np.zeros(adjacency_matrix.shape)
     for i in range(adjacency_matrix.shape[0]): ##FORM AFFINITY MATRIX
         for j in range(adjacency_matrix.shape[0]):
-            affinity[i,j] = np.exp(((adjacency_matrix[:,i] - adjacency_matrix[:,j])**2)/(2*sigma**2))
+            if i == j:
+                affinity[i, j] = 0
+            else:
+                affinity[i, j] = np.exp(-(np.linalg.norm(adjacency_matrix[:, i]-adjacency_matrix[:, j]))/(2*sigma**2))
     row_sums = np.sum(affinity, axis=1)
+    row_sums = row_sums**(-1/2)
     d = np.diag(row_sums) ##DIAGONAL MATRIX FROM SUM OF ROWS
+    laplace = np.dot(d**(-1/2), affinity)
     laplacian = d**(-1/2)*affinity*d**(-1/2) #FORM L MATRIX
     eigval, eigvec = np.linalg.eig(laplacian) #COMPUTE EIGENVECTORS
     eigvec = eigvec.real #sometimes due to floating point errors in numpy ou get complex eigenvectors
