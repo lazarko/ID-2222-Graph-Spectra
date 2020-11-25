@@ -1,6 +1,8 @@
 import numpy as np
 import sklearn as sk
 import scipy.sparse as sps
+import networkx as nx
+import scipy as sp
 
 
 def getData():
@@ -29,29 +31,43 @@ def getData():
         adjacency_matrix[i-1, j-1] = w #nodes are numbered from 1, not 0
 
     #print(adjacency_matrix)
-    return adjacency_matrix
+
+    graph = nx.Graph()
+    for edge in edgelist:
+        graph.add_edge(edge[0], edge[1])
+    print(graph.number_of_nodes())
+    adjacency = nx.adjacency_matrix(graph)
+    print(adjacency.todense())
+    print(adjacency_matrix)
+    adjacency = adjacency.todense()
+    return adjacency
 
 def spectralClustering(adjacency_matrix):
-    sigma = 1 #WHAT IS SIGMA?
+    sigma = 2 #WHAT IS SIGMA?
     k = 6 #WHAT NUMBER OF KLUSTERS??
     affinity = np.zeros(adjacency_matrix.shape)
+    sigma_square = sigma**2
     for i in range(adjacency_matrix.shape[0]): ##FORM AFFINITY MATRIX
         for j in range(adjacency_matrix.shape[0]):
             if i == j:
                 affinity[i, j] = 0
             else:
-                affinity[i, j] = np.exp(-(np.linalg.norm(adjacency_matrix[:, i]-adjacency_matrix[:, j]))/(2*sigma**2))
+                affinity[i, j] = np.exp(-np.linalg.norm(adjacency_matrix[:, i]-adjacency_matrix[:, j])/(2*sigma_square))
     row_sums = np.sum(affinity, axis=1)
     row_sums = row_sums**(-1/2)
     d = np.diag(row_sums) ##DIAGONAL MATRIX FROM SUM OF ROWS
-    laplace = np.dot(d**(-1/2), affinity)
-    laplacian = d**(-1/2)*affinity*d**(-1/2) #FORM L MATRIX
-    eigval, eigvec = np.linalg.eig(laplacian) #COMPUTE EIGENVECTORS
+    new_d = d**-0.5
+    laplace = np.dot(d, affinity).dot(d)#form L matrix
+    #laplacian = d**(-1/2)*affinity*d**(-1/2) #FORM L MATRIX
+    eigval, eigvec = np.linalg.eig(laplace) #COMPUTE EIGENVECTORS
     eigvec = eigvec.real #sometimes due to floating point errors in numpy ou get complex eigenvectors
-    x = eigvec[:, 0:k]
+    sorted = np.sort(eigvec)[:, ::-1]
+
+    x = sorted[:, 0:k]
     y = sk.preprocessing.normalize(x, axis=1)
     kmeans = sk.cluster.KMeans(n_clusters=k)
     predicted = kmeans.fit_predict(y)
+    # TODO om rad i av Y hamnar i cluster j, lägg nod i i cluster j
     #assign original node s[i] (represented by its vector of edges) to cluster j if row i in Y is assigned to cluster j
 
 
