@@ -1,5 +1,5 @@
 import numpy as np
-import sklearn as sk
+from sklearn import preprocessing, cluster
 import scipy.sparse as sps
 import networkx as nx
 import scipy as sp
@@ -40,7 +40,7 @@ def getData():
     print(adjacency.todense())
     print(adjacency_matrix)
     adjacency = adjacency.todense()
-    return adjacency
+    return adjacency, graph
 
 def spectralClustering(adjacency_matrix):
     sigma = 2 #WHAT IS SIGMA?
@@ -64,15 +64,21 @@ def spectralClustering(adjacency_matrix):
     sorted = np.sort(eigvec)[:, ::-1]
 
     x = sorted[:, 0:k]
-    y = sk.preprocessing.normalize(x, axis=1)
-    kmeans = sk.cluster.KMeans(n_clusters=k)
-    predicted = kmeans.fit_predict(y)
+    y = preprocessing.normalize(x, axis=1)
+    kmeans = cluster.KMeans(n_clusters=k)
+    labels = kmeans.fit_predict(y)
+    classification = []
+    for i, label in enumerate(labels):
+        print(i, " -->", label)
+
     # TODO om rad i av Y hamnar i cluster j, lägg nod i i cluster j
+    return labels
     #assign original node s[i] (represented by its vector of edges) to cluster j if row i in Y is assigned to cluster j
 
 
 
 
 
-adjacent = getData()
-spectralClustering(adjacent)
+adjacent, graph = getData()
+labels = spectralClustering(adjacent)
+nx.draw_networkx(graph, node_color=labels, cmap="Dark2")
