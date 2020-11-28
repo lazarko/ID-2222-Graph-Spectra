@@ -3,6 +3,7 @@ from sklearn import preprocessing, cluster
 import scipy.sparse as sps
 import networkx as nx
 import scipy as sp
+import matplotlib.pyplot as plt
 
 
 def getData():
@@ -40,45 +41,46 @@ def getData():
     print(adjacency.todense())
     print(adjacency_matrix)
     adjacency = adjacency.todense()
+    #nx.draw(graph, with_labels=True)
+    #plt.show()
     return adjacency, graph
 
 def spectralClustering(adjacency_matrix):
-    sigma = 2 #WHAT IS SIGMA?
-    k = 6 #WHAT NUMBER OF KLUSTERS??
+    sigma = 1 #WHAT IS SIGMA? #osäker på hur sigma ska väljas
+    k = 4 #WHAT NUMBER OF KLUSTERS??  # väljer antal clusters för K Means
     affinity = np.zeros(adjacency_matrix.shape)
     sigma_square = sigma**2
-    for i in range(adjacency_matrix.shape[0]): ##FORM AFFINITY MATRIX
+    for i in range(adjacency_matrix.shape[0]): ##FORM AFFINITY MATRIX #räknar ut affinity matrix enligt formeln, tydligen kan adjacency användas direkt...
         for j in range(adjacency_matrix.shape[0]):
             if i == j:
                 affinity[i, j] = 0
             else:
                 affinity[i, j] = np.exp(-np.linalg.norm(adjacency_matrix[:, i]-adjacency_matrix[:, j])/(2*sigma_square))
     row_sums = np.sum(affinity, axis=1)
-    row_sums = row_sums**(-1/2)
+    row_sums = row_sums**(-1/2) #kvadratroten ur osv
     d = np.diag(row_sums) ##DIAGONAL MATRIX FROM SUM OF ROWS
-    new_d = d**-0.5
-    laplace = np.dot(d, affinity).dot(d)#form L matrix
+    laplace = np.dot(d, affinity).dot(d)#form L matrix #forma L matrisen
     #laplacian = d**(-1/2)*affinity*d**(-1/2) #FORM L MATRIX
-    eigval, eigvec = np.linalg.eig(laplace) #COMPUTE EIGENVECTORS
+    eigval, eigvec = np.linalg.eig(laplace) #COMPUTE EIGENVECTORS #egenvektorer egenvärden
     eigvec = eigvec.real #sometimes due to floating point errors in numpy ou get complex eigenvectors
-    sorted = np.sort(eigvec)[:, ::-1]
+    sorted = np.sort(eigvec)[:, ::-1] #sorterar, behövs det?
 
-    x = sorted[:, 0:k]
-    y = preprocessing.normalize(x, axis=1)
+    x = eigvec[:,:10] #plocka ut ett antal egenvektorer
+    y = preprocessing.normalize(x, axis=1) #normalize (vektorer av l'ngd 1
     kmeans = cluster.KMeans(n_clusters=k)
     labels = kmeans.fit_predict(y)
     classification = []
     for i, label in enumerate(labels):
         print(i, " -->", label)
 
-    # TODO om rad i av Y hamnar i cluster j, lägg nod i i cluster j
+    
     return labels
     #assign original node s[i] (represented by its vector of edges) to cluster j if row i in Y is assigned to cluster j
 
 
-
-
-
 adjacent, graph = getData()
 labels = spectralClustering(adjacent)
-nx.draw_networkx(graph, node_color=labels, cmap="Dark2")
+nx.draw_networkx(graph, with_labels=True, node_color=labels, cmap="Dark2") #resulterande cluster-tilldelning används för att färgkoda grafen...
+plt.show()
+
+
