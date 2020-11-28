@@ -1,86 +1,70 @@
 import numpy as np
 from sklearn import preprocessing, cluster
-import scipy.sparse as sps
 import networkx as nx
-import scipy as sp
 import matplotlib.pyplot as plt
 
 
 def getData():
     edgelist = np.genfromtxt("example1.dat", delimiter=",", dtype=int)
-    print(edgelist.dtype)
-
-    if edgelist.shape[1] == 3:
-        weight = edgelist[:, 2]
-        edgelist = edgelist[:, 0:2]
-    else:
-        weight = np.ones((len(edgelist), 1))
-    i, j = edgelist[:, 0], edgelist[:, 1]
-    #print(i)
-    #print(edgelist)
-    dim = max(max(set(i), set(j)))
-    test = min(min(set(i), set(i)))
-    #print(test)
-    #print(dim)
-    adjacency_matrix = np.zeros((dim, dim))
-    #print(adjacency_matrix.shape)
-    #print(adjacency_matrix)
-
-    #matrix = sps.lil_matrix((dim, dim))
-    #print("size", adjacency_matrix)
-    for i, j, w in zip(i, j, weight):
-        adjacency_matrix[i-1, j-1] = w #nodes are numbered from 1, not 0
-
-    #print(adjacency_matrix)
-
     graph = nx.Graph()
     for edge in edgelist:
         graph.add_edge(edge[0], edge[1])
-    print(graph.number_of_nodes())
+
     adjacency = nx.adjacency_matrix(graph)
-    print(adjacency.todense())
-    print(adjacency_matrix)
+
     adjacency = adjacency.todense()
-    #nx.draw(graph, with_labels=True)
-    #plt.show()
-    return adjacency, graph
+    nx.draw(graph, with_labels=True)
+    plt.show()
+    return adjacency, graph, adjacency_matrix
 
 def spectralClustering(adjacency_matrix):
-    sigma = 1 #WHAT IS SIGMA? #osäker på hur sigma ska väljas
-    k = 4 #WHAT NUMBER OF KLUSTERS??  # väljer antal clusters för K Means
+    sigma = 5
+    k = 4 #choose num clusters for KMeans
+    num_eigenvectors = 5
     affinity = np.zeros(adjacency_matrix.shape)
     sigma_square = sigma**2
-    for i in range(adjacency_matrix.shape[0]): ##FORM AFFINITY MATRIX #räknar ut affinity matrix enligt formeln, tydligen kan adjacency användas direkt...
+    for i in range(adjacency_matrix.shape[0]): ##FORM AFFINITY MATRIX
         for j in range(adjacency_matrix.shape[0]):
             if i == j:
                 affinity[i, j] = 0
             else:
                 affinity[i, j] = np.exp(-np.linalg.norm(adjacency_matrix[:, i]-adjacency_matrix[:, j])/(2*sigma_square))
     row_sums = np.sum(affinity, axis=1)
-    row_sums = row_sums**(-1/2) #kvadratroten ur osv
+    row_sums = row_sums**(-1/2) #Sum rows, etc
     d = np.diag(row_sums) ##DIAGONAL MATRIX FROM SUM OF ROWS
-    laplace = np.dot(d, affinity).dot(d)#form L matrix #forma L matrisen
-    #laplacian = d**(-1/2)*affinity*d**(-1/2) #FORM L MATRIX
+    laplace = np.dot(d, affinity).dot(d)#form L matrix
     eigval, eigvec = np.linalg.eig(laplace) #COMPUTE EIGENVECTORS #egenvektorer egenvärden
-    eigvec = eigvec.real #sometimes due to floating point errors in numpy ou get complex eigenvectors
-    sorted = np.sort(eigvec)[:, ::-1] #sorterar, behövs det?
-
-    x = eigvec[:,:10] #plocka ut ett antal egenvektorer
-    y = preprocessing.normalize(x, axis=1) #normalize (vektorer av l'ngd 1
     kmeans = cluster.KMeans(n_clusters=k)
-    labels = kmeans.fit_predict(y)
-    classification = []
-    for i, label in enumerate(labels):
-        print(i, " -->", label)
-
-    
+    x = eigvec[:, :num_eigenvectors] #choose the greatest eigenvectors
+    y = preprocessing.normalize(x, axis=1)  # normalize
+    labels = kmeans.fit_predict(y) #K Means clustering
+    nodes_by_label = {}
+    for label in np.unique(labels):
+        nodes_by_label[label] = np.where(labels == label)
+    for key in nodes_by_label.keys():
+        print(key, " : ", nodes_by_label[key])
     return labels
-    #assign original node s[i] (represented by its vector of edges) to cluster j if row i in Y is assigned to cluster j
+
+def clusteringFromAdjacency(adjacency_matrix):
+    k = 4
+    kmeans = cluster.KMeans(n_clusters=k)
+    sum = np.sum(adjacency_matrix, axis=0)
+    sum_squared = 1/np.sqrt(sum)
+    diagonal = np.diag(sum_squared)
+    l = np.dot(diagonal, adjacency_matrix).dot(diagonal)
+    eigval2, eigvec2 = np.linalg.eig(l)
+    x2 = eigvec2[:, :6]
+    y2 = preprocessing.normalize(x2, axis=1)
+    labels2 = kmeans.fit_predict(y2)
+    return labels2
 
 
-adjacent, graph = getData()
-labels = spectralClustering(adjacent)
+adjacent_nx, graph, adjacency_matrix = getData()
+labels = spectralClustering(adjacent_nx)
+#labels2 = clusteringFromAdjacency(adjacency_matrix)
 nx.draw_networkx(graph, with_labels=True, node_color=labels, cmap="Dark2") #resulterande cluster-tilldelning används för att färgkoda grafen...
+#nx.draw_networkx(graph, with_labels=True, node_color=labels2, cmap="Dark2")
+plt.title("Using affinity matrix")
 plt.show()
 
 
