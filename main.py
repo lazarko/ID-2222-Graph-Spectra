@@ -15,7 +15,7 @@ def getData():
     adjacency = adjacency.todense()
     nx.draw(graph, with_labels=True)
     plt.show()
-    return adjacency, graph, adjacency_matrix
+    return adjacency, graph
 
 def spectralClustering(adjacency_matrix):
     sigma = 5
@@ -59,10 +59,10 @@ def clusteringFromAdjacency(adjacency_matrix):
     return labels2
 
 
-adjacent_nx, graph, adjacency_matrix = getData()
-labels = spectralClustering(adjacent_nx)
-#labels2 = clusteringFromAdjacency(adjacency_matrix)
-nx.draw_networkx(graph, with_labels=True, node_color=labels, cmap="Dark2") #resulterande cluster-tilldelning används för att färgkoda grafen...
+adjacent, graph = getData()
+labels = spectralClustering(adjacent)
+#labels2 = clusteringFromAdjacency(adjacenct)
+nx.draw_networkx(graph, with_labels=True, node_color=labels, cmap="Dark2") #Nodes are colorcoded according to cluster label
 #nx.draw_networkx(graph, with_labels=True, node_color=labels2, cmap="Dark2")
 plt.title("Using affinity matrix")
 plt.show()
